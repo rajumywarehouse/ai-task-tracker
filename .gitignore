@@ -12,3 +12,6 @@ coverage/
 *.swo
 logs/
 .vercel
+
+.vercel
+.env*.local
