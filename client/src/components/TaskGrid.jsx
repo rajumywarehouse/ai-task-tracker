@@ -15,21 +15,22 @@ const TaskGrid = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [filters, setFilters] = useState({});
-    const user = useStore((state) => state.user);
+    const _user = useStore((state) => state.user);
 
-    useEffect(() => {
-        loadTasks();
-        loadUsers();
-    }, [filters]);
-
-    const loadTasks = async () => {
+    const loadTasks = useCallback(async () => {
         try {
             const response = await tasksAPI.getAll(filters);
             setTasks(response.data);
         } catch (error) {
             toast.error('Failed to load tasks');
         }
-    };
+    }, [filters]);
+
+    useEffect(() => {
+        loadTasks();
+        loadUsers();
+    }, [loadTasks]);
+
 
     const loadUsers = async () => {
         try {
@@ -165,7 +166,7 @@ const TaskGrid = () => {
             toast.error('Failed to update task');
             params.node.setDataValue(params.colDef.field, params.oldValue);
         }
-    }, []);
+    }, [loadTasks]);
 
     const onSelectionChanged = useCallback((event) => {
         setSelectedRows(event.api.getSelectedRows());

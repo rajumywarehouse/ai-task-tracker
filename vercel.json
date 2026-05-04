@@ -2,7 +2,7 @@
   "version": 2,
   "framework": null,
   "installCommand": "npm install && cd client && npm install",
-  "buildCommand": "cd client && npm run build",
+  "buildCommand": "cd client && CI=false npm run build",
   "outputDirectory": "client/build",
   "routes": [
     {
