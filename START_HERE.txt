@@ -1,0 +1,67 @@
+╔═══════════════════════════════════════════════════════════════╗
+║   AI-POWERED TASK TRACKING SYSTEM - QUICK START              ║
+║   Static Data Mode (No Database/API Keys Required!)          ║
+╚═══════════════════════════════════════════════════════════════╝
+
+📋 STEP 1: Install Dependencies
+   
+   Run these commands in your terminal:
+   
+   npm install
+   cd client
+   npm install
+   cd ..
+
+🚀 STEP 2: Start the Application
+
+   npm run dev
+
+   This will start both backend (port 5000) and frontend (port 3000)
+
+🌐 STEP 3: Open Browser
+
+   Navigate to: http://localhost:3000
+
+🔐 STEP 4: Login
+
+   Email: john.leader@company.com
+   Password: password123
+
+✨ FEATURES TO TRY:
+
+   ✓ Dashboard - View metrics, charts, and AI insights
+   ✓ Tasks - Create, edit, filter, and manage tasks
+   ✓ Bulk Actions - Select multiple tasks and send reminders
+   ✓ Export - Download tasks as CSV
+   ✓ Inline Editing - Click any cell in the grid to edit
+
+📊 SAMPLE DATA INCLUDED:
+
+   • 5 Users (Leader, Manager, Team Members)
+   • 10 Tasks (various statuses)
+   • Comments & History
+   • All fully functional!
+
+📖 MORE INFO:
+
+   See QUICK_START.md for detailed instructions
+   See README.md for full documentation
+
+💡 TIPS:
+
+   • All data is stored in memory (resets on restart)
+   • Notifications are logged to console (no real emails sent)
+   • AI responses use fallback messages (no OpenAI needed)
+   • Perfect for testing and demonstration!
+
+🔧 TROUBLESHOOTING:
+
+   Port in use? Change PORT in .env or package.json
+   Errors? Check terminal output and browser console (F12)
+   Need help? See QUICK_START.md
+
+═══════════════════════════════════════════════════════════════
+
+Ready to go! Run: npm run dev
+
+═══════════════════════════════════════════════════════════════
