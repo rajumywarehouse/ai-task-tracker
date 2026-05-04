@@ -12,6 +12,7 @@ const TaskModal = ({ task, users, onClose, onSave }) => {
         sla_type: '24hrs',
         custom_sla_hours: '',
         auto_reminder: true,
+        reminder_channels: ['email'],
         remarks: ''
     });
 
@@ -25,10 +26,20 @@ const TaskModal = ({ task, users, onClose, onSave }) => {
                 sla_type: task.sla_type || '24hrs',
                 custom_sla_hours: '',
                 auto_reminder: task.auto_reminder !== false,
+                reminder_channels: task.reminder_channels || ['email'],
                 remarks: task.remarks || ''
             });
         }
     }, [task]);
+
+    const toggleChannel = (channel) => {
+        setFormData(prev => {
+            const channels = prev.reminder_channels.includes(channel)
+                ? prev.reminder_channels.filter(c => c !== channel)
+                : [...prev.reminder_channels, channel];
+            return { ...prev, reminder_channels: channels };
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -187,17 +198,50 @@ const TaskModal = ({ task, users, onClose, onSave }) => {
                         />
                     </div>
 
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            name="auto_reminder"
-                            checked={formData.auto_reminder}
-                            onChange={handleChange}
-                            className="rounded text-primary-500 mr-2"
-                        />
-                        <label className="text-sm text-gray-700">
-                            Enable Auto Reminders
-                        </label>
+                    <div>
+                        <div className="flex items-center mb-2">
+                            <input
+                                type="checkbox"
+                                name="auto_reminder"
+                                checked={formData.auto_reminder}
+                                onChange={handleChange}
+                                className="rounded text-primary-500 mr-2"
+                            />
+                            <label className="text-sm font-medium text-gray-700">
+                                Enable Auto Reminders
+                            </label>
+                        </div>
+                        {formData.auto_reminder && (
+                            <div className="ml-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <p className="text-xs font-medium text-gray-500 uppercase mb-2">Reminder Channels</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+                                        { id: 'email', label: 'Email', icon: '📧' },
+                                        { id: 'sms', label: 'Message (SMS)', icon: '📱' },
+                                        { id: 'phone', label: 'Over Phone', icon: '📞' }
+                                    ].map(ch => (
+                                        <label
+                                            key={ch.id}
+                                            className={`flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                                                formData.reminder_channels.includes(ch.id)
+                                                    ? 'border-primary-500 bg-primary-50'
+                                                    : 'border-gray-200 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.reminder_channels.includes(ch.id)}
+                                                onChange={() => toggleChannel(ch.id)}
+                                                className="rounded text-primary-500"
+                                            />
+                                            <span className="text-sm">{ch.icon}</span>
+                                            <span className="text-sm text-gray-700">{ch.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-end space-x-3 pt-4 border-t">

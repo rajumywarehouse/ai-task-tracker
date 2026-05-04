@@ -1,12 +1,15 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { Filter, Send, AlertTriangle, Plus, Download } from 'lucide-react';
+import { Filter, Send, AlertTriangle, Plus, Download, RotateCcw } from 'lucide-react';
 import { tasksAPI, usersAPI, notificationsAPI, integrationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import useStore from '../store/useStore';
 import TaskModal from './TaskModal';
+
+const COL_STATE_KEY = 'taskGrid_columnState';
+const PAGE_SIZE_KEY = 'taskGrid_pageSize';
 
 const TaskGrid = () => {
     const [tasks, setTasks] = useState([]);
@@ -15,7 +18,12 @@ const TaskGrid = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [filters, setFilters] = useState({});
-    const _user = useStore((state) => state.user);
+    const [pageSize, setPageSize] = useState(() => {
+        const saved = localStorage.getItem(PAGE_SIZE_KEY);
+        return saved ? parseInt(saved, 10) : 20;
+    });
+    const gridRef = useRef(null);
+    const currentUser = useStore((state) => state.user);
 
     const loadTasks = useCallback(async () => {
         try {
@@ -30,7 +38,6 @@ const TaskGrid = () => {
         loadTasks();
         loadUsers();
     }, [loadTasks]);
-
 
     const loadUsers = async () => {
         try {
@@ -134,6 +141,26 @@ const TaskGrid = () => {
             }
         },
         {
+            field: 'user_response',
+            headerName: 'User Response',
+            width: 220,
+            editable: (params) => {
+                return params.data.responsible_person_id === currentUser?.id;
+            },
+            cellStyle: (params) => {
+                if (params.data.responsible_person_id === currentUser?.id) {
+                    return { backgroundColor: '#f0f9ff', cursor: 'text' };
+                }
+                return { color: '#6b7280' };
+            },
+            cellRenderer: (params) => {
+                if (!params.value && params.data.responsible_person_id === currentUser?.id) {
+                    return '<span style="color:#9ca3af;font-style:italic">Click to add response...</span>';
+                }
+                return params.value || '';
+            }
+        },
+        {
             field: 'remarks',
             headerName: 'Remarks',
             width: 200,
@@ -145,7 +172,7 @@ const TaskGrid = () => {
             width: 130,
             valueFormatter: (params) => new Date(params.value).toLocaleDateString()
         }
-    ], []);
+    ], [currentUser]);
 
     const defaultColDef = useMemo(() => ({
         sortable: true,
@@ -153,6 +180,45 @@ const TaskGrid = () => {
         resizable: true,
         floatingFilter: true
     }), []);
+
+    const saveColumnState = useCallback(() => {
+        if (gridRef.current && gridRef.current.api) {
+            const colState = gridRef.current.api.getColumnState();
+            localStorage.setItem(COL_STATE_KEY, JSON.stringify(colState));
+        }
+    }, []);
+
+    const restoreColumnState = useCallback(() => {
+        if (gridRef.current && gridRef.current.api) {
+            const saved = localStorage.getItem(COL_STATE_KEY);
+            if (saved) {
+                try {
+                    const colState = JSON.parse(saved);
+                    gridRef.current.api.applyColumnState({ state: colState, applyOrder: true });
+                } catch (_e) {
+                    // ignore parse errors
+                }
+            }
+        }
+    }, []);
+
+    const resetColumnState = useCallback(() => {
+        localStorage.removeItem(COL_STATE_KEY);
+        if (gridRef.current && gridRef.current.api) {
+            gridRef.current.api.resetColumnState();
+        }
+        toast.info('Column layout reset to default');
+    }, []);
+
+    const onGridReady = useCallback(() => {
+        restoreColumnState();
+    }, [restoreColumnState]);
+
+    const onColumnMoved = useCallback(() => { saveColumnState(); }, [saveColumnState]);
+    const onColumnResized = useCallback((e) => { if (e.finished) saveColumnState(); }, [saveColumnState]);
+    const onColumnVisible = useCallback(() => { saveColumnState(); }, [saveColumnState]);
+    const onColumnPinned = useCallback(() => { saveColumnState(); }, [saveColumnState]);
+    const onSortChanged = useCallback(() => { saveColumnState(); }, [saveColumnState]);
 
     const onCellValueChanged = useCallback(async (params) => {
         try {
@@ -172,12 +238,20 @@ const TaskGrid = () => {
         setSelectedRows(event.api.getSelectedRows());
     }, []);
 
+    const handlePageSizeChange = useCallback((e) => {
+        const newSize = parseInt(e.target.value, 10);
+        setPageSize(newSize);
+        localStorage.setItem(PAGE_SIZE_KEY, String(newSize));
+        if (gridRef.current && gridRef.current.api) {
+            gridRef.current.api.paginationSetPageSize(newSize);
+        }
+    }, []);
+
     const handleSendReminders = async () => {
         if (selectedRows.length === 0) {
             toast.warning('Please select tasks first');
             return;
         }
-
         try {
             const taskIds = selectedRows.map(t => t.task_id);
             await notificationsAPI.sendReminders({ task_ids: taskIds });
@@ -192,7 +266,6 @@ const TaskGrid = () => {
             toast.warning('Please select tasks first');
             return;
         }
-
         try {
             const taskIds = selectedRows.map(t => t.task_id);
             await notificationsAPI.escalateTasks({ task_ids: taskIds });
@@ -237,7 +310,7 @@ const TaskGrid = () => {
             </div>
 
             <div className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center flex-wrap gap-3 mb-4">
                     <Filter className="w-5 h-5 text-gray-600" />
                     <select
                         onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -268,6 +341,29 @@ const TaskGrid = () => {
                         />
                         <span className="text-sm text-gray-700">Overdue Only</span>
                     </label>
+
+                    <div className="flex items-center space-x-2 ml-2">
+                        <label className="text-sm text-gray-600">Rows:</label>
+                        <select
+                            value={pageSize}
+                            onChange={handlePageSizeChange}
+                            className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                        >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={resetColumnState}
+                        className="flex items-center px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                        title="Reset column layout to default"
+                    >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Reset Columns
+                    </button>
 
                     <div className="flex-1"></div>
 
@@ -302,16 +398,23 @@ const TaskGrid = () => {
 
                 <div className="ag-theme-alpine" style={{ height: 600, width: '100%' }}>
                     <AgGridReact
+                        ref={gridRef}
                         rowData={tasks}
                         columnDefs={columnDefs}
                         defaultColDef={defaultColDef}
                         rowSelection="multiple"
+                        onGridReady={onGridReady}
                         onSelectionChanged={onSelectionChanged}
                         onCellValueChanged={onCellValueChanged}
+                        onColumnMoved={onColumnMoved}
+                        onColumnResized={onColumnResized}
+                        onColumnVisible={onColumnVisible}
+                        onColumnPinned={onColumnPinned}
+                        onSortChanged={onSortChanged}
                         getRowStyle={getRowStyle}
                         animateRows={true}
                         pagination={true}
-                        paginationPageSize={20}
+                        paginationPageSize={pageSize}
                     />
                 </div>
             </div>

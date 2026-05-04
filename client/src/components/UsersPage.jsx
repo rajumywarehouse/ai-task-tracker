@@ -407,9 +407,16 @@ const UsersPage = () => {
                                     {usersList
                                         .filter(u => u.role === 'Leader' || u.role === 'Manager')
                                         .map(u => (
-                                            <option key={u.user_id} value={u.user_id}>{u.name} ({u.role})</option>
+                                            <option key={u.user_id} value={String(u.user_id)}>
+                                                {u.name} — {u.role}{u.department_name ? ` (${u.department_name})` : ''}
+                                            </option>
                                         ))}
                                 </select>
+                                {addForm.manager_id && (
+                                    <p className="text-xs text-primary-600 mt-1">
+                                        Selected: {usersList.find(u => String(u.user_id) === String(addForm.manager_id))?.name || 'Unknown'}
+                                    </p>
+                                )}
                             </div>
                             <div className="flex justify-end space-x-3 pt-2 border-t">
                                 <button
